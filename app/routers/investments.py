@@ -30,7 +30,28 @@ class InvestmentUpdate(BaseModel):
 
 investments = []
 
+# -------- Helper Function --------
+def format_investment(investment):
+    flag = ""
+    if investment.risk > 0.5 * investment.buy_price:
+        flag = "⚠️ HIGH RISK"
+    return{
+        f"Name: {investment.name} | "
+        f"OVR: {investment.overall} | "
+        f"Buy Price: {investment.buy_price} | "
+        f"QSV: {investment.qsv} | "
+        f"Quantity: {investment.quantity} | "
+        f"Total Invested: {investment.total_invested} | "
+        f"Risk: {investment.risk} {flag}"
+    }
+
+
 router = APIRouter(prefix="/investments", tags=["Investments"])
+
+# Pretty printout of investments
+@router.get("/pretty")
+def print_pretty_all():
+    return{"investments" : [format_investment(i) for i in investments]}
 
 # Add a single investment
 @router.post("/add")
