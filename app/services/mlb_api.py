@@ -1,8 +1,13 @@
 import requests
 
-def fetch_market_data():
+def fetch_market_data(name=None):
     url = "https://mlb25.theshow.com/apis/listings.json"
-    response = requests.get(url)
+    params = {
+        "type" : "mlb_card"
+    }
+    if name:
+        params["name"] = name
+    response = requests.get(url, params=params)
 
     if response.status_code != 200:
         raise Exception("Failed to fetch data from MLB The Show API")
@@ -18,7 +23,16 @@ def format_player_listings(raw_data):
             "name" : item.get("name"),
             "overall" : item.get("ovr"),
             "buy_price" : listing.get("best_buy_price"),
-            "sell_price" : listing.get("best_sell_price")
+            "sell_price" : listing.get("best_sell_price"),
+            "uuid" : listing.get("uuid")
         })
 
     return players
+
+def get_listing(uuid):
+    url = "https://mlb25.theshow.com/apis/listings.json"
+    params = {
+        "type" : "mlb_card",
+        "uuid" : uuid
+    }
+    response = requests.get()
