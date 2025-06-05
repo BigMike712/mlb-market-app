@@ -24,13 +24,13 @@ def format_player_listings(raw_data):
             "overall" : item.get("ovr"),
             "buy_price" : listing.get("best_buy_price"),
             "sell_price" : listing.get("best_sell_price"),
-            "uuid" : listing.get("uuid")
+            "uuid" : item.get("uuid")
         })
 
     return players
 
 def get_listing(uuid):
-    url = "https://mlb25.theshow.com/apis/listings.json"
+    url = "https://mlb25.theshow.com/apis/listing.json"
     params = {
         "type" : "mlb_card",
         "uuid" : uuid

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi import Query
 from fastapi import Body
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dataclasses import dataclass
 from dataclasses import asdict
 from typing import Optional
@@ -17,11 +17,9 @@ class Investment:
     risk: int
 
 class InvestmentIn(BaseModel):
-    name: str
-    overall: int
-    buy_price: int
-    quantity: int
-    qsv: int
+    uuid: str
+    buy_price: int = Field(..., gt=0, description="Price per card in stubs (must be > 0)")
+    quantity: int = Field(..., gt=0, description="Number of cards purchased (must be > 0)")
 
 class InvestmentUpdate(BaseModel):
     buy_price: Optional[int] = None
@@ -56,19 +54,8 @@ def print_pretty_all():
 # Add a single investment
 @router.post("/add")
 def add_investment(investment: InvestmentIn):
-    total_invested = investment.buy_price * investment.quantity
-    calculated_risk = total_invested - (investment.qsv*investment.quantity)
-    new_investment = Investment(
-        name=investment.name,
-        overall=investment.overall,
-        buy_price=investment.buy_price,
-        qsv=investment.qsv,
-        quantity=investment.quantity,
-        total_invested=total_invested,
-        risk=calculated_risk
-    )
-    investments.append(new_investment)
-    return {"message": "Investment added", "investment": asdict(new_investment)}
+    investments.append(investment)
+    return {"message": "Investment added", "investment": investment.dict()}
 
 # Return all investments
 @router.get("/")
@@ -145,7 +132,8 @@ def update_investment(
         "message": f"Investment for {investment.name} updated",
         "updated_investment": asdict(investment)
     }
-    
+
+# Summary of all investments
 @router.get("/summary")
 def get_summary():
     total_quantity = 0

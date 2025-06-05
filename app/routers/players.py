@@ -36,9 +36,5 @@ def get_live_prices(
 def search_player(name : str = Query()):
     raw_data = fetch_market_data(name = name)
     formatted_data = format_player_listings(raw_data)
-    matches = []
-    for player in formatted_data:
-        if player["name"].lower() == name.lower():
-            matches.append(player)
-    return{"count" : len(matches), "results" : matches}
+    return{"count" : len(formatted_data), "results" : formatted_data}
 
