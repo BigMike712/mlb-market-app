@@ -1,0 +1,14 @@
+<ul>
+  {% for player in players %}
+    <li>
+      <button 
+        hx-post="/players/select"
+        hx-vals='{"uuid": "{{ player.uuid }}"}'
+        hx-target="#investment-form"
+        hx-swap="innerHTML"
+      >
+        {{ player.name }} (OVR {{ player.overall }})
+      </button>
+    </li>
+  {% endfor %}
+</ul>

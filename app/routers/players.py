@@ -1,8 +1,13 @@
-from fastapi import APIRouter
-from fastapi import Query
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import HTMLResponse
 from app.services.mlb_api import fetch_market_data, format_player_listings
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(prefix="/players", tags=["Players"])
+
+print("players.py loaded")
 
 # When someone sends a GET request to the route /players/, call the function below:
 @router.get("/")
@@ -32,9 +37,19 @@ def get_live_prices(
         players = players[:limit]
     return {"count" : len(players), "players" : players} 
 
-@router.get("/search")
-def search_player(name : str = Query()):
+@router.get("/search", response_class=HTMLResponse)
+def search_player(name : str , request: Request):
+    if not name:
+        return templates.TemplateResponse("search_results.html", {
+        "request": request,
+        "players": []
+        })
+    
     raw_data = fetch_market_data(name = name)
     formatted_data = format_player_listings(raw_data)
-    return{"count" : len(formatted_data), "results" : formatted_data}
+
+    return templates.TemplateResponse("search_results.html", {
+        "request": request,
+        "players": formatted_data
+    })
 

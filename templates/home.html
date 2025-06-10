@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Player Investment</h1>
+
+    <h2>Search for a Player</h2>
+  <input 
+    type="text"
+    name="name"
+    placeholder="Enter player name"
+    hx-get="/players/search"
+    hx-trigger="keyup changed delay:300ms"
+    hx-target="#player-results"
+    hx-swap="innerHTML"
+  />
+
+<div id="player-results">
+  <!-- Search results will appear here -->
+</div>
+
+<div id="investment-form">
+  <!-- Selected player info + buy/qty form goes here -->
+</div>
+
+{% endblock %}
