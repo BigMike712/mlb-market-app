@@ -1,11 +1,12 @@
-from fastapi import APIRouter
-from fastapi import Query
-from fastapi import Body
+from fastapi import APIRouter, Query, Body, Form
+from fastapi import Request
+from fastapi.responses import HTMLResponse
 from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional
 from app.investment_helpers import create_investment_from_input
 from app.models.investment_models import InvestmentIn, Investment, InvestmentUpdate
+from fastapi.templating import Jinja2Templates
 
 
 # In-memory list of investments --> needs to be swapped to storing it into a DB at some point
@@ -13,13 +14,28 @@ investments = []
 
 router = APIRouter(prefix="/investments", tags=["Investments"])
 
+templates = Jinja2Templates(directory="templates")
+
 
 # Add a single investment
 @router.post("/add")
-def add_investment(investment: InvestmentIn):
-    new_investment = create_investment_from_input(investment)
+def add_investment(
+    uuid: str = Form(...),
+    buy_price: int = Form(...),
+    quantity: int = Form(...)
+):
+    investment_in = InvestmentIn(uuid=uuid, buy_price=buy_price, quantity=quantity)
+    new_investment = create_investment_from_input(investment_in)
     investments.append(new_investment)
-    return {"message": "Investment added", "investment": new_investment.dict()}
+    return HTMLResponse(content="""
+  <div id="investment-modal"
+        hx-on::after-request="document.body.dispatchEvent(new Event('investment-added'))"
+        style='background: white;padding: 20px;border-radius: 10px;text-align: center;'>
+    ✅ Investment added successfully!
+    <br/><br/>
+    <button onclick="document.getElementById('investment-modal').remove()">Close</button>
+  </div>
+""")
 
 # Return all investments
 @router.get("/")
@@ -98,7 +114,7 @@ def update_investment(
 
 # Summary of all investments
 @router.get("/summary")
-def get_summary():
+def get_summary(request: Request):
     total_quantity = 0
     total_stubs_invested = 0
     total_qsv = 0
@@ -108,10 +124,14 @@ def get_summary():
         total_stubs_invested += (i.buy_price * i.quantity)
         total_qsv += (i.qsv * i.quantity)
         total_risk += i.risk
-    return {"total_quantity" : total_quantity, 
-            "total_stubs_invested" : total_stubs_invested, 
-            "total_qsv" : total_qsv, 
-            "total_risk" : total_risk}
-
+    return templates.TemplateResponse("partials/investment_summary.html", {
+        "request": request,
+        "summary": {
+            "total_quantity": total_quantity,
+            "total_stubs_invested": total_stubs_invested,
+            "total_qsv": total_qsv,
+            "total_risk": total_risk
+        }
+    })
 
 

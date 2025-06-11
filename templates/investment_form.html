@@ -1,0 +1,47 @@
+<h2>Invest in {{ player.name }} (OVR {{ player.ovr }})</h2>
+
+<div 
+  id="investment-modal"
+  style="
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  "
+>
+    <div style="background: white; padding: 20px; border-radius: 10px; width: 300px;">
+        <h2>Invest in {{ player.name }} (OVR {{ player.ovr }})</h2> 
+
+        <form 
+        hx-post="/investments/add"
+        hx-target="#investment-modal"
+        hx-swap="outerHTML"
+        >
+        <input type="hidden" name="uuid" value="{{ player.uuid }}" />
+
+        <label>Buy Price:</label>
+        <input 
+            type="number" 
+            name="buy_price" 
+            min="1"
+            required 
+            placeholder="Enter buy price"
+        />
+        <br/>
+
+        <label>Quantity:</label>
+        <input 
+            type="number" 
+            name="quantity" 
+            min="1"
+            required 
+            placeholder="Enter quantity"
+        />
+        <br/>
+
+        <button type="submit">Add Investment</button>
+    </form>
+    </div>
+</div>

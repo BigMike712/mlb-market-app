@@ -1,14 +1,17 @@
-<ul>
+<ul style="list-style: none; padding: 0;">
   {% for player in players %}
-    <li>
+    <li style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+      <img src="{{ player.img }}" alt="{{ player.name }}" style="width: 60px; height: auto; border-radius: 6px;">
       <button 
         hx-post="/players/select"
         hx-vals='{"uuid": "{{ player.uuid }}"}'
         hx-target="#investment-form"
         hx-swap="innerHTML"
+        style="padding: 8px 12px;"
       >
         {{ player.name }} (OVR {{ player.overall }})
       </button>
     </li>
   {% endfor %}
 </ul>
+

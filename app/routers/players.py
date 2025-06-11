@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, Form
 from fastapi.responses import HTMLResponse
-from app.services.mlb_api import fetch_market_data, format_player_listings
+from app.services.mlb_api import fetch_market_data, format_player_listings, get_listing
 from fastapi.templating import Jinja2Templates
 
 templates = Jinja2Templates(directory="templates")
@@ -52,4 +52,14 @@ def search_player(name : str , request: Request):
         "request": request,
         "players": formatted_data
     })
+
+@router.post("/select", response_class=HTMLResponse)
+def select_player(request:Request, uuid: str = Form(...)):
+    listing = get_listing(uuid)
+    player = listing["item"]
+    return templates.TemplateResponse("investment_form.html", {
+        "request":request,
+        "player":player
+    })
+
 

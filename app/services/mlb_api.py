@@ -24,7 +24,8 @@ def format_player_listings(raw_data):
             "overall" : item.get("ovr"),
             "buy_price" : listing.get("best_buy_price"),
             "sell_price" : listing.get("best_sell_price"),
-            "uuid" : item.get("uuid")
+            "uuid" : item.get("uuid"),
+            "img" : item.get("img")
         })
 
     return players
@@ -35,4 +36,5 @@ def get_listing(uuid):
         "type" : "mlb_card",
         "uuid" : uuid
     }
-    response = requests.get()
+    response = requests.get(url, params)
+    return response.json()
