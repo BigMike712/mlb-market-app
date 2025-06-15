@@ -19,16 +19,18 @@ def get_update_data(id:int):
 # -----------------------------
 # Caching logic for player data
 # -----------------------------
-def get_cached_player_data(uuid: str, cache_dir="cache-5-23") -> dict:
+def get_cached_player_data(uuid: str, cache_dir: str) -> dict:
     os.makedirs(cache_dir, exist_ok=True)
     cache_path = os.path.join(cache_dir, f"player_{uuid}.json")
 
     # Return from cache if exists
     if os.path.exists(cache_path):
+        print(f"[Cache hit] {uuid}")
         with open(cache_path, "r") as f:
             return json.load(f)
 
     # Otherwise, fetch from API
+    print(f"[Cache miss] {uuid}")
     data = get_player_data(uuid)
     if data:
         with open(cache_path, "w") as f:
@@ -72,6 +74,55 @@ def load_roster_update_data(id: int) -> pd.DataFrame:
 # -----------------------------
 # Build attribute dataset
 # -----------------------------
-def load_player_attributes(uuids: list[str], sleep_time=0.25) -> pd.DataFrame:
-    players_attributes = []
-    
+def load_player_attributes(uuids: list[str], cache_dir: str, sleep_time=0.25) -> pd.DataFrame:
+    player_attributes = []
+    for uuid in uuids:
+        try:
+            data = get_cached_player_data(uuid, cache_dir)
+
+            if not data:
+                print(f"Skipping UUID {uuid} - no data returned")
+                continue
+            
+            # Pull key attributes
+            player_name = data.get("name")
+            overall = data.get("ovr")
+            position = data.get("display_position")
+            is_hitter = data.get("is_hitter")
+
+            # Pull key hitting attributes
+            contact_left = data.get("contact_left")
+            contact_right = data.get("contact_right")
+            power_left = data.get("power_left")
+            power_right = data.get("power_right")
+            vision = data.get("plate_vision")
+            discipline = data.get("plate_discipline")
+
+            # Pull key pitching attributes
+            hits_per_9 = data.get("hits_per_bf")
+            k_per_9 = data.get("k_per_bf")
+            bb_per_9 = data.get("bb_per_bf")
+            hr_per_9 = data.get("hr_per_bf")
+
+            # Add this attributes to in memory list 
+            player_attributes.append({
+                "player_name": player_name,
+                "player_id": uuid,
+                "overall_rating": overall,
+                "is_hitter": is_hitter,
+                "contact_left": contact_left,
+                "contact_right": contact_right,
+                "power_left": power_left,
+                "power_right": power_right,
+                "vision": vision,
+                "discipline": discipline,
+                "hits_per_9": hits_per_9,
+                "k_per_9": k_per_9,
+                "bb_per_9": bb_per_9,
+                "hr_per_9": hr_per_9
+            })
+        except Exception as e:
+            print(f"Error fetching data for UUID {uuid}: {e}")
+        
+        time.sleep(sleep_time)
+    return pd.DataFrame(player_attributes)
