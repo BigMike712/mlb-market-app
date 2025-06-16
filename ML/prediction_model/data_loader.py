@@ -30,7 +30,6 @@ def get_cached_player_data(uuid: str, cache_dir: str) -> dict:
             return json.load(f)
 
     # Otherwise, fetch from API
-    print(f"[Cache miss] {uuid}")
     data = get_player_data(uuid)
     if data:
         with open(cache_path, "w") as f:
@@ -39,7 +38,8 @@ def get_cached_player_data(uuid: str, cache_dir: str) -> dict:
 
 def get_player_data(uuid: str) -> dict:
     url = "https://mlb25.theshow.com/apis/item.json"
-    params = {"id": uuid}
+    params = {"uuid": uuid}
+    print(f"Calling API for UUID {uuid}") 
     response = requests.get(url, params=params)
     if response.status_code != 200:
         raise Exception(f"Failed to fetch player {uuid}: {response.status_code}")
@@ -126,3 +126,46 @@ def load_player_attributes(uuids: list[str], cache_dir: str, sleep_time=0.25) ->
         
         time.sleep(sleep_time)
     return pd.DataFrame(player_attributes)
+
+def get_live_series_uuids_from_listings(delay: float = 0.25, max_pages: int = 76):
+    """
+    Fetches all UUIDs for market-listed Live Series players using the listings API.
+
+    Args:
+        delay (float): Seconds to wait between page requests (to be nice to the API).
+        max_pages (int): Safety cap on how many pages to request (adjust as needed).
+
+    Returns:
+        Set[str]: A set of player UUIDs.
+    """
+    uuids = set()
+    page = 1
+
+    while page <= max_pages:
+        url = "https://mlb25.theshow.com/apis/listings.json"
+        params = {
+            "series_id": "1337",
+            "page": page
+        }
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            print(f"Failed to fetch page {page}, status code {response.status_code}")
+            break
+
+        data = response.json()
+        listings = data.get("listings", [])
+
+        if not listings:
+            print(f"No more listings after page {page}. Stopping.")
+            break
+
+        for listing in listings:
+            uuid = listing.get("item", {}).get("uuid")
+            if uuid:
+                uuids.add(uuid)
+
+        print(f"✅ Page {page} fetched. Total UUIDs so far: {len(uuids)}")
+        page += 1
+        time.sleep(delay)
+
+    return uuids
