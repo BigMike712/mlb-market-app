@@ -1,4 +1,5 @@
 import pandas as pd
+import unicodedata
 from prediction_model.data_loader import load_player_attributes, load_roster_update_data
 
 # -----------------------------
@@ -122,10 +123,15 @@ def clean_fg_data(fg_data: pd.DataFrame):
     return fg_data
 
 
+def normalize_name(name):
+    if pd.isnull(name):
+        return ""
+    return unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("utf-8").strip().lower()
+
 # -----------------------------
 # Merge Fangraph Data with Merged Attribute and Roster Update Data
 # -----------------------------
-def merge_fangraphs_data(attr_df, fangraphs_csv_path, name_col="Name"):
+def merge_fangraphs_data(attr_df, fg_df, name_col="Name"):
     """
     Merges Fangraphs stats into the attribute dataframe using player name.
     Also logs how many players matched and how many did not.
@@ -139,23 +145,24 @@ def merge_fangraphs_data(attr_df, fangraphs_csv_path, name_col="Name"):
         pd.DataFrame: Merged dataframe.
     """
 
-    fg_df = pd.read_csv(fangraphs_csv_path)
-
     # Sanitize names
-    fg_df[name_col] = fg_df[name_col].str.strip().str.lower()
-    attr_df["player_name_clean"] = attr_df["player_name"].str.strip().str.lower()
+    fg_df["normalized_name"] = fg_df[name_col].apply(normalize_name)
+    attr_df["normalized_name"] = attr_df["player_name"].apply(normalize_name)
 
     # Merge
-    merged = attr_df.merge(fg_df, left_on="player_name_clean", right_on=name_col, how="left")
+    merged = attr_df.merge(fg_df.drop(columns=[name_col], errors="ignore"), on="normalized_name", how="left", indicator=True)
 
     # Log results
     total = len(merged)
-    matched = merged[fg_df.columns.difference([name_col])].notnull().any(axis=1).sum()
+    matched = (merged["_merge"] == "both").sum()
     unmatched = total - matched
     print(f"[merge_fangraphs_data] Total players: {total} | Matched: {matched} | Unmatched: {unmatched}")
 
+    unmatched_df = merged[merged["_merge"] == "left_only"]
+    print("Unmatched player names:", unmatched_df["player_name"].unique())
+
     # Clean up
-    merged.drop(columns=["player_name_clean", name_col], inplace=True, errors="ignore")
+    merged.drop(columns=["normalized_name", "_merge"], inplace=True, errors="ignore")
 
     return merged
 
