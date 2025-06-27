@@ -3,14 +3,40 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 from xgboost import XGBClassifier
 from prediction_model.tracking import log_model_performance  # if using logging module
-import pandas as pd
+import joblib
+import os
 
-log_model_performance(
-    log_path="model_logs.jsonl",
-    model_name="XGBoost_baseline",
-    metrics={"accuracy": acc, "f1": f1},
-    notes="No scaling, raw features"
-)
+def make_discrepancy_features(df):
+    # 1. Normalize in-game attributes to 0–1 scale using live series max of 115
+    df['contact_right_norm'] = df['contact_right'] / 115
+    df['contact_left_norm'] = df['contact_left'] / 115
+    df['power_right_norm'] = df['power_right'] / 115
+    df['power_left_norm'] = df['power_left'] / 115
+    df['discipline_norm'] = df['discipline'] / 115
+
+    # 2. Discrepancy features (normalized rating - IRL stat)
+    df['contact_right_vs_rhp_avg'] = df['contact_right_norm'] - df['rhp_AVG']
+    df['contact_left_vs_lhp_avg'] = df['contact_left_norm'] - df['lhp_AVG']
+    df['power_right_vs_rhp_slg'] = df['power_right_norm'] - df['rhp_SLG']
+    df['power_left_vs_lhp_slg'] = df['power_left_norm'] - df['lhp_SLG']
+    df['discipline_vs_bb'] = df['discipline_norm'] - df['rhp_BB%']
+
+    # 3. IRL-derived indices
+    df['plate_discipline_index'] = df['rhp_BB%'] - df['rhp_K%']
+
+    # 4. Interaction features (raw in-game attributes x IRL stats)
+    df['contact_right_x_avg'] = df['contact_right'] * df['rhp_AVG']
+    df['power_right_x_slg'] = df['power_right'] * df['rhp_SLG']
+    df['discipline_x_bb'] = df['discipline'] * df['rhp_BB%']
+
+    # 5. Drop intermediate normalized features (used only to compute discrepancies)
+    df.drop(columns=[
+        'contact_right_norm', 'contact_left_norm',
+        'power_right_norm', 'power_left_norm',
+        'discipline_norm'
+    ], inplace=True)
+
+    return df
 
 
 def train_model(
@@ -20,7 +46,7 @@ def train_model(
     test_size=0.2,
     random_state=42,
     drop_columns=None,
-    log_path="model_logs.jsonl",
+    log_path="../prediction_model/experiment_logs/model_logs.jsonl",
     notes=""
 ):
     """
@@ -44,10 +70,12 @@ def train_model(
 
     # Step 1: Feature/target split
     if drop_columns is None:
-        drop_columns = ["player_id", "player_name", target]
+        drop_columns = ["player_id", "player_name", "is_hitter", "new_overall", "overall_rating", "playerId", target]
 
     X = df.drop(columns=drop_columns)
     y = df[target]
+
+    features = X.columns.tolist()
 
     # Step 2: Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
@@ -59,10 +87,13 @@ def train_model(
         n_estimators=100,
         max_depth=5,
         learning_rate=0.1,
-        use_label_encoder=False,
         eval_metric="mlogloss",
         random_state=random_state
     )
+    
+    # Save the model's hyperparameters
+    hyperparameters = model.get_params()
+
     model.fit(X_train, y_train)
 
     # Step 4: Predict and evaluate
@@ -78,7 +109,15 @@ def train_model(
 
     # Step 5: Log results
     metrics = {"accuracy": acc, "f1_score": f1}
-    log_model_performance(log_path, model_name, metrics, notes)
+    log_model_performance(log_path=log_path, model_name=model_name, metrics=metrics, features=features, hyperparameters=hyperparameters, notes=notes)
+
+    model_dir = "saved_models"
+    os.makedirs(model_dir, exist_ok=True)
+
+    model_path = os.path.join(model_dir, f"{model_name}.joblib")
+    joblib.dump(model, model_path)
+
+    print(f"💾 Model saved to {model_path}")
 
     return model, X_train, X_test, y_train, y_test, y_pred
 

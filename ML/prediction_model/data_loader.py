@@ -124,7 +124,7 @@ def load_player_attributes(uuids: list[str], cache_dir: str, sleep_time=0.25) ->
         except Exception as e:
             print(f"Error fetching data for UUID {uuid}: {e}")
         
-        time.sleep(sleep_time)
+        # time.sleep(sleep_time)
     return pd.DataFrame(player_attributes)
 
 def get_live_series_uuids_from_listings(delay: float = 0.25, max_pages: int = 76):
